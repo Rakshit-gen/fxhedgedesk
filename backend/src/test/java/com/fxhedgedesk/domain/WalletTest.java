@@ -31,4 +31,18 @@ class WalletTest {
         assertThatThrownBy(() -> wallet.debit(new BigDecimal("150.00")))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void negativeAmountsAreRejectedByBothCreditAndDebit() {
+        Wallet wallet = new Wallet(user, new BigDecimal("1000.00"));
+        assertThatThrownBy(() -> wallet.credit(new BigDecimal("-10.00"))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> wallet.debit(new BigDecimal("-10.00"))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void debitingExactlyTheFullBalanceLeavesItAtZeroRatherThanRejecting() {
+        Wallet wallet = new Wallet(user, new BigDecimal("500.00"));
+        wallet.debit(new BigDecimal("500.00"));
+        assertThat(wallet.getBalance()).isEqualByComparingTo("0.00");
+    }
 }
