@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -81,6 +82,19 @@ class HedgeServiceTest {
         // Locked in selling at 1.10, spot is now 1.05: better than the market, a gain.
         assertThat(pnl.signum()).isPositive();
         assertThat(pnl).isEqualByComparingTo("250.00");
+    }
+
+    @Test
+    void bookingAForwardLargerThanTheRemainingUnhedgedAmountIsRejected() {
+        Exposure exposure = new Exposure(user, eurUsd, ExposureDirection.RECEIVABLE, new BigDecimal("10000"),
+                new BigDecimal("1.08"), 30, "Invoice");
+        when(exposureService.requireOwnedBy(exposure.getId(), user)).thenReturn(exposure);
+        when(rateService.getCurrentRate("EURUSD")).thenReturn(new BigDecimal("1.09"));
+
+        assertThatThrownBy(() -> hedgeService.bookForward(user, exposure.getId(), new BigDecimal("15000")))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(forwardContractRepository, never()).save(any());
     }
 
     @Test
