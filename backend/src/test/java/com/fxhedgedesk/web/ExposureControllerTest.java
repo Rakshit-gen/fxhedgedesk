@@ -70,6 +70,18 @@ class ExposureControllerTest {
     }
 
     @Test
+    void bookingWithADueDayOfZeroIsRejectedBeforeReachingTheService() throws Exception {
+        String badJson = """
+                {"pairCode":"EURUSD","direction":"RECEIVABLE","amount":1000,"daysUntilDue":0,"description":"Invoice"}""";
+
+        mockMvc.perform(post("/api/exposures")
+                        .with(asUser())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(badJson))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void bookingAValidExposureReturnsItsSerializedForm() throws Exception {
         Exposure exposure = new Exposure(user, eurUsd, ExposureDirection.RECEIVABLE, new BigDecimal("8000"),
                 new BigDecimal("1.0950"), 15, "Test invoice");
