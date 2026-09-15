@@ -49,6 +49,7 @@ create table exposure (
     pair_code           varchar(6) not null references currency_pair(code),
     direction           varchar(12) not null,
     amount              numeric(18,2) not null,
+    hedged_amount       numeric(18,2) not null default 0,
     booked_rate         numeric(18,6) not null,
     due_sim_day         bigint not null,
     description         varchar(255) not null,
