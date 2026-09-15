@@ -23,7 +23,10 @@ public class Exposure {
     @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // Eager: a 5-row reference table read alongside amounts everywhere, and DTO
+    // mapping happens after the owning transaction closes, where a lazy proxy
+    // would throw.
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "pair_code", nullable = false)
     private CurrencyPair pair;
 

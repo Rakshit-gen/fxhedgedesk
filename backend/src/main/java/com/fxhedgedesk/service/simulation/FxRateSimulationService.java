@@ -4,7 +4,7 @@ import com.fxhedgedesk.domain.CurrencyPair;
 import com.fxhedgedesk.domain.FxRateTick;
 import com.fxhedgedesk.repository.CurrencyPairRepository;
 import com.fxhedgedesk.repository.FxRateTickRepository;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,25 +30,26 @@ public class FxRateSimulationService {
 
     private final CurrencyPairRepository currencyPairRepository;
     private final FxRateTickRepository fxRateTickRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final RateBroadcaster broadcaster;
     private final Random random;
 
     private final Map<String, BigDecimal> currentRates = new ConcurrentHashMap<>();
     private volatile boolean seeded = false;
 
+    @Autowired
     public FxRateSimulationService(CurrencyPairRepository currencyPairRepository,
                                     FxRateTickRepository fxRateTickRepository,
-                                    SimpMessagingTemplate messagingTemplate) {
-        this(currencyPairRepository, fxRateTickRepository, messagingTemplate, new Random());
+                                    RateBroadcaster broadcaster) {
+        this(currencyPairRepository, fxRateTickRepository, broadcaster, new Random());
     }
 
     public FxRateSimulationService(CurrencyPairRepository currencyPairRepository,
                                     FxRateTickRepository fxRateTickRepository,
-                                    SimpMessagingTemplate messagingTemplate,
+                                    RateBroadcaster broadcaster,
                                     Random random) {
         this.currencyPairRepository = currencyPairRepository;
         this.fxRateTickRepository = fxRateTickRepository;
-        this.messagingTemplate = messagingTemplate;
+        this.broadcaster = broadcaster;
         this.random = random;
     }
 
@@ -87,8 +88,7 @@ public class FxRateSimulationService {
             currentRates.put(pair.getCode(), next);
 
             fxRateTickRepository.save(new FxRateTick(pair.getCode(), next, simDay));
-            messagingTemplate.convertAndSend("/topic/rates/" + pair.getCode(),
-                    new RateUpdate(pair.getCode(), next, simDay));
+            broadcaster.broadcast(pair.getCode(), next, simDay);
         }
     }
 

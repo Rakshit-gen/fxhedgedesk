@@ -35,6 +35,16 @@ public class CurrencyPair {
     protected CurrencyPair() {
     }
 
+    public CurrencyPair(String code, String baseCcy, String quoteCcy, BigDecimal startingRate,
+                         BigDecimal annualVolatility, BigDecimal annualDrift) {
+        this.code = code;
+        this.baseCcy = baseCcy;
+        this.quoteCcy = quoteCcy;
+        this.startingRate = startingRate;
+        this.annualVolatility = annualVolatility;
+        this.annualDrift = annualDrift;
+    }
+
     public String getCode() {
         return code;
     }

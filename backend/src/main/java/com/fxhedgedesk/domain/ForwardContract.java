@@ -27,7 +27,9 @@ public class ForwardContract {
     @JoinColumn(name = "exposure_id", nullable = false)
     private Exposure exposure;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // Eager for the same reason as Exposure.pair: a tiny reference table read
+    // after the owning transaction has closed.
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "pair_code", nullable = false)
     private CurrencyPair pair;
 

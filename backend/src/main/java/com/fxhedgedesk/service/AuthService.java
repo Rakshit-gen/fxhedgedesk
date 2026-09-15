@@ -37,8 +37,7 @@ public class AuthService {
         if (appUserRepository.existsByEmail(email)) {
             throw new ConflictException("An account with that email already exists");
         }
-        AppUser user = new AppUser(email, passwordEncoder.encode(rawPassword), displayName);
-        appUserRepository.save(user);
+        AppUser user = appUserRepository.save(new AppUser(email, passwordEncoder.encode(rawPassword), displayName));
         walletService.openWallet(user, STARTING_BALANCE);
         return jwtService.issue(user.getId(), user.getEmail());
     }

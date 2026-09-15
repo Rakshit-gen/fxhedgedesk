@@ -5,6 +5,7 @@ import com.fxhedgedesk.repository.ExposureRepository;
 import com.fxhedgedesk.repository.ForwardContractRepository;
 import com.fxhedgedesk.service.simulation.FxRateSimulationService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -40,6 +41,7 @@ public class PortfolioService {
         this.hedgeService = hedgeService;
     }
 
+    @Transactional(readOnly = true)
     public PortfolioSummary summarize(AppUser user) {
         List<Exposure> exposures = exposureRepository.findByUserOrderByDueSimDayAsc(user);
         List<Exposure> openExposures = exposures.stream()
