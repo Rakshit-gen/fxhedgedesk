@@ -46,6 +46,25 @@ class ExposureTest {
     }
 
     @Test
+    void hedgingAZeroOrNegativeNotionalIsRejected() {
+        Exposure exposure = new Exposure(user, pair, ExposureDirection.RECEIVABLE, new BigDecimal("10000"),
+                new BigDecimal("1.08"), 30, "Q1 invoice");
+
+        assertThatThrownBy(() -> exposure.applyHedge(BigDecimal.ZERO)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> exposure.applyHedge(new BigDecimal("-100"))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void hedgingAnAlreadySettledExposureIsRejected() {
+        Exposure exposure = new Exposure(user, pair, ExposureDirection.RECEIVABLE, new BigDecimal("10000"),
+                new BigDecimal("1.08"), 30, "Q1 invoice");
+        exposure.settle(new BigDecimal("1.10"), new BigDecimal("200"));
+
+        assertThatThrownBy(() -> exposure.applyHedge(new BigDecimal("1000")))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void settlingTwiceIsRejected() {
         Exposure exposure = new Exposure(user, pair, ExposureDirection.PAYABLE, new BigDecimal("10000"),
                 new BigDecimal("1.08"), 30, "Supplier bill");
