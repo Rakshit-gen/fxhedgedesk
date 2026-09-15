@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -70,5 +71,39 @@ class FxRateSimulationServiceTest {
         serviceB.tick(1, 1);
 
         assertThat(serviceA.getCurrentRate("EURUSD")).isEqualByComparingTo(serviceB.getCurrentRate("EURUSD"));
+    }
+
+    @Test
+    void askingForARateOnAnUnknownPairFailsLoudlyInsteadOfReturningNull() {
+        FxRateSimulationService service = new FxRateSimulationService(
+                currencyPairRepository, fxRateTickRepository, (code, rate, day) -> { }, new Random(42));
+
+        assertThatThrownBy(() -> service.getCurrentRate("ZZZXXX")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void pairsReturnsWhateverTheRepositorySeedsIt() {
+        CurrencyPair usdJpy = new CurrencyPair("USDJPY", "USD", "JPY", new BigDecimal("150"),
+                new BigDecimal("0.09"), BigDecimal.ZERO);
+        when(currencyPairRepository.findAll()).thenReturn(List.of(eurUsd, usdJpy));
+        FxRateSimulationService service = new FxRateSimulationService(
+                currencyPairRepository, fxRateTickRepository, (code, rate, day) -> { }, new Random(42));
+
+        assertThat(service.pairs()).containsExactly(eurUsd, usdJpy);
+    }
+
+    @Test
+    void eachPairMovesIndependentlyOnATick() {
+        CurrencyPair usdJpy = new CurrencyPair("USDJPY", "USD", "JPY", new BigDecimal("150"),
+                new BigDecimal("0.09"), BigDecimal.ZERO);
+        when(currencyPairRepository.findAll()).thenReturn(List.of(eurUsd, usdJpy));
+        FxRateSimulationService service = new FxRateSimulationService(
+                currencyPairRepository, fxRateTickRepository, (code, rate, day) -> { }, new Random(42));
+
+        service.tick(1, 1);
+
+        assertThat(service.getCurrentRate("EURUSD")).isNotEqualByComparingTo("1.0850");
+        assertThat(service.getCurrentRate("USDJPY")).isNotEqualByComparingTo("150");
+        verify(fxRateTickRepository, times(2)).save(any());
     }
 }
