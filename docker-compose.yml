@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fxhedgedesk
+      POSTGRES_USER: fxhedgedesk
+      POSTGRES_PASSWORD: fxhedgedesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - fxhedgedesk-db:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    depends_on:
+      - postgres
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/fxhedgedesk
+      DB_USER: fxhedgedesk
+      DB_PASSWORD: fxhedgedesk
+      JWT_SECRET: change-me-in-production-please-32-bytes-min
+    ports:
+      - "8081:8081"
+
+volumes:
+  fxhedgedesk-db:
