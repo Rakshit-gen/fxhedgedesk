@@ -91,4 +91,37 @@ class HedgeFlowIntegrationTest {
         BigDecimal walletAfter = walletService.requireWallet(user).getBalance();
         assertThat(walletAfter).isEqualByComparingTo(openingBalance.add(expectedPnl));
     }
+
+    @Test
+    void aFullyHedgedPayableSettlesWithNoUnhedgedVarianceLeftOver() {
+        String email = "importer-" + UUID.randomUUID() + "@example.com";
+        authService.register(email, "password123", "Test Importer");
+        AppUser user = appUserRepository.findByEmail(email).orElseThrow();
+
+        Exposure exposure = exposureService.bookExposure(user, "EURUSD", ExposureDirection.PAYABLE,
+                new BigDecimal("5000"), 2, "Supplier invoice");
+        ForwardContract forward = hedgeService.bookForward(user, exposure.getId(), new BigDecimal("5000"));
+
+        Exposure hedgedExposure = exposureRepository.findById(exposure.getId()).orElseThrow();
+        assertThat(hedgedExposure.getStatus()).isEqualTo(ExposureStatus.HEDGED);
+        assertThat(forward.getDirection()).isEqualTo(ForwardDirection.BUY);
+
+        long dueDay = hedgedExposure.getDueSimDay();
+        for (long day = 1; day <= dueDay; day++) {
+            rateService.tick(day, 1);
+        }
+        BigDecimal settlementRate = rateService.getCurrentRate("EURUSD");
+
+        settlementService.processDueSettlements(dueDay);
+
+        ForwardContract settledForward = forwardContractRepository.findById(forward.getId()).orElseThrow();
+        Exposure settledExposure = exposureRepository.findById(exposure.getId()).orElseThrow();
+
+        BigDecimal expectedPnl = FxMath.toUsd(settledForward.getPair(), settledForward.getNotional(), settlementRate)
+                .subtract(FxMath.toUsd(settledForward.getPair(), settledForward.getNotional(), settledForward.getContractedRate()));
+        assertThat(settledForward.getRealizedPnl()).isEqualByComparingTo(expectedPnl);
+
+        assertThat(settledExposure.getStatus()).isEqualTo(ExposureStatus.SETTLED);
+        assertThat(settledExposure.getUnhedgedVariance()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
 }
